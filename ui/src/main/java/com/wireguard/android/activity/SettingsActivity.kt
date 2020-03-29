@@ -10,13 +10,17 @@ import android.os.Build
 import android.os.Bundle
 import android.util.SparseArray
 import android.view.MenuItem
+import androidx.biometric.BiometricManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.SwitchPreference
 import com.wireguard.android.Application
 import com.wireguard.android.R
 import com.wireguard.android.backend.WgQuickBackend
+import com.wireguard.android.util.AuthenticationResult
+import com.wireguard.android.util.Authenticator
 import com.wireguard.android.util.ModuleLoader
 import java.util.ArrayList
 import java.util.Arrays
@@ -104,6 +108,37 @@ class SettingsActivity : ThemeChangeAwareActivity() {
             preferenceManager.findPreference<Preference>("log_viewer")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), LogViewerActivity::class.java))
                 true
+            }
+            preferenceManager.findPreference<SwitchPreference>("biometric_auth")?.apply {
+                val isFingerprintSupported =
+                        BiometricManager.from(requireContext()).canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+                if (!isFingerprintSupported) {
+                    isEnabled = false
+                    isChecked = false
+                    summary = getString(R.string.biometric_auth_summary_error)
+                } else {
+                    setOnPreferenceClickListener {
+                        isEnabled = false
+                        val checked = isChecked
+                        Authenticator(requireActivity()) { result ->
+                            when (result) {
+                                is AuthenticationResult.Success -> {
+                                    // Apply the changes
+                                    Application.getSharedPreferences().edit().putBoolean("biometric_auth", checked).apply()
+                                    isEnabled = true
+                                }
+                                else -> {
+                                    // If any error occurs, revert back to the previous state. This
+                                    // catch-all clause includes the cancellation case.
+                                    Application.getSharedPreferences().edit().putBoolean("biometric_auth", !checked).apply()
+                                    isChecked = !checked
+                                    isEnabled = true
+                                }
+                            }
+                        }.authenticate()
+                        true
+                    }
+                }
             }
             val moduleInstaller = preferenceManager.findPreference<Preference>("module_downloader")
             val kernelModuleDisabler = preferenceManager.findPreference<Preference>("kernel_module_disabler")
