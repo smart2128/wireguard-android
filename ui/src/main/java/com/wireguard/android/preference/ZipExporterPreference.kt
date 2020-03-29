@@ -14,6 +14,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.wireguard.android.Application
 import com.wireguard.android.R
 import com.wireguard.android.model.ObservableTunnel
+import com.wireguard.android.util.AuthenticationResult
+import com.wireguard.android.util.Authenticator
 import com.wireguard.android.util.DownloadsFileSaver
 import com.wireguard.android.util.ErrorMessages
 import com.wireguard.android.util.FragmentUtils
@@ -81,13 +83,25 @@ class ZipExporterPreference(context: Context, attrs: AttributeSet?) : Preference
     override fun getTitle() = context.getString(R.string.zip_export_title)
 
     override fun onClick() {
-        FragmentUtils.getPrefActivity(this)
-                .ensurePermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)) { _, grantResults ->
-                    if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                        isEnabled = false
-                        exportZip()
+        if (Application.getSharedPreferences().getBoolean("biometric_auth", false)) {
+            val prefActivity = FragmentUtils.getPrefActivity(this)
+            Authenticator(prefActivity) {
+                when (it) {
+                    // When we have successful authentication, or when there is no biometric hardware available.
+                    is AuthenticationResult.Success, is AuthenticationResult.UnrecoverableError -> {
+                        prefActivity.ensurePermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)) { _, grantResults ->
+                            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                                isEnabled = false
+                                exportZip()
+                            }
+                        }
+                    }
+                    is AuthenticationResult.Cancelled, is AuthenticationResult.Failure -> {
+                        Snackbar.make(prefActivity.findViewById(android.R.id.content), "Failed to authenticate operation", Snackbar.LENGTH_LONG).show()
                     }
                 }
+            }.authenticate()
+        }
     }
 
     companion object {
