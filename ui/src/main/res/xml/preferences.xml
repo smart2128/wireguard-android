@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:key="settings">
     <com.wireguard.android.preference.VersionPreference
         android:icon="@mipmap/ic_launcher"
@@ -36,4 +37,9 @@
         android:summaryOff="@string/allow_remote_control_intents_summary_off"
         android:summaryOn="@string/allow_remote_control_intents_summary_on"
         android:title="@string/allow_remote_control_intents_title" />
+    <SwitchPreference
+        android:defaultValue="false"
+        app:key="biometric_auth"
+        app:summary="@string/biometric_auth_summary"
+        app:title="@string/biometric_auth_title" />
 </androidx.preference.PreferenceScreen>
