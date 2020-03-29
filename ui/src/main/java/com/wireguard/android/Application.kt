@@ -21,6 +21,9 @@ import com.wireguard.android.backend.Backend
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.WgQuickBackend
 import com.wireguard.android.configStore.FileConfigStore
+import com.wireguard.android.di.AppComponent
+import com.wireguard.android.di.DaggerAppComponent
+import com.wireguard.android.di.InjectorProvider
 import com.wireguard.android.model.TunnelManager
 import com.wireguard.android.util.AsyncWorker
 import com.wireguard.android.util.ExceptionLoggers
@@ -31,7 +34,7 @@ import java9.util.concurrent.CompletableFuture
 import java.lang.ref.WeakReference
 import java.util.Locale
 
-class Application : android.app.Application(), OnSharedPreferenceChangeListener {
+class Application : android.app.Application(), OnSharedPreferenceChangeListener, InjectorProvider {
     private val futureBackend = CompletableFuture<Backend>()
     private lateinit var asyncWorker: AsyncWorker
     private var backend: Backend? = null
@@ -40,6 +43,8 @@ class Application : android.app.Application(), OnSharedPreferenceChangeListener 
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var toolsInstaller: ToolsInstaller
     private lateinit var tunnelManager: TunnelManager
+
+    override val component by lazy { DaggerAppComponent.factory().create(applicationContext) }
 
     override fun attachBaseContext(context: Context) {
         super.attachBaseContext(context)
